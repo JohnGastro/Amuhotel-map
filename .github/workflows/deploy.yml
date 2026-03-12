@@ -3,6 +3,8 @@ name: Deploy to GitHub Pages
 on:
   push:
     branches: [main]
+  schedule:
+    - cron: '0 21 * * *'  # 毎日6:00 JST (21:00 UTC)
   workflow_dispatch:
 
 permissions:
@@ -33,13 +35,19 @@ jobs:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: node Amu-lp-map/scripts/generate-routes.js
 
-      # Commit updated routes.json back to repo (cache for next run)
-      - name: Commit routes.json if changed
+      # Refresh business hours from Places API (daily)
+      - name: Refresh business hours
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: node Amu-lp-map/scripts/refresh-hours.js
+
+      # Commit updated data files back to repo (cache for next run)
+      - name: Commit data files if changed
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Amu-lp-map/public/data/routes.json
-          git diff --cached --quiet || git commit -m "chore: update routes.json [skip ci]"
+          git add Amu-lp-map/public/data/routes.json Amu-lp-map/public/data/hours.json
+          git diff --cached --quiet || git commit -m "chore: update routes/hours data [skip ci]"
           git push || true
 
       - name: Setup Pages

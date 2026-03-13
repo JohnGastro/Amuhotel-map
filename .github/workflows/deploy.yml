@@ -24,6 +24,8 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
     steps:
       - uses: actions/checkout@v4
+        with:
+          submodules: true
 
       - uses: actions/setup-node@v4
         with:
@@ -35,8 +37,9 @@ jobs:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: node Amu-lp-map/scripts/generate-routes.js
 
-      # Refresh business hours from Places API (daily)
+      # Refresh business hours from Places API (daily cron only)
       - name: Refresh business hours
+        if: github.event_name == 'schedule'
         env:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: node Amu-lp-map/scripts/refresh-hours.js
@@ -49,6 +52,12 @@ jobs:
           git add Amu-lp-map/public/data/routes.json Amu-lp-map/public/data/hours.json
           git diff --cached --quiet || git commit -m "chore: update routes/hours data [skip ci]"
           git push || true
+
+      # Inject API key into HTML before deploy
+      - name: Inject API key
+        env:
+          GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
+        run: sed -i "s#var apiKey = window.GOOGLE_MAPS_API_KEY || '';#var apiKey = window.GOOGLE_MAPS_API_KEY || '${GOOGLE_MAPS_API_KEY}';#" Amu-lp-map/public/access-beppu-map.html
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

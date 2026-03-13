@@ -44,12 +44,13 @@ jobs:
           GOOGLE_MAPS_API_KEY: ${{ secrets.GOOGLE_MAPS_API_KEY }}
         run: node Amu-lp-map/scripts/refresh-hours.js
 
-      # Commit updated data files back to repo (cache for next run)
+      # Commit updated data files back to submodule repo (cache for next run)
       - name: Commit data files if changed
         run: |
+          cd Amu-lp-map
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add Amu-lp-map/public/data/routes.json Amu-lp-map/public/data/hours.json
+          git add -f public/data/routes.json public/data/hours.json 2>/dev/null || true
           git diff --cached --quiet || git commit -m "chore: update routes/hours data [skip ci]"
           git push || true
 
